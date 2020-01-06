@@ -240,21 +240,24 @@ public class CordMcast {
                 }
                 NextContent next = groups.get(groupInfo).value();
 
-                ObjectiveContext context = new DefaultObjectiveContext(
-                        (objective) -> log.debug("Successfully remove {}",
-                                                 groupInfo.group),
-                        (objective, error) -> log.warn("Failed to remove {}: {}",
-                                                       groupInfo.group, error));
-                // remove the flow rule
-                flowObjectiveService.forward(groupInfo.getDevice(), fwdObject(next.getNextId(),
-                                                                              groupInfo.group).remove(context));
-                // remove all ports from the group
-                next.getOutPorts().stream().forEach(portNumber ->
-                    flowObjectiveService.next(groupInfo.getDevice(), nextObject(next.getNextId(),
-                                                                                portNumber, NextType.RemoveFromExisting,
-                                                                                groupInfo.group))
-                );
+                if (next != null) {
+                    ObjectiveContext context = new DefaultObjectiveContext(
+                            (objective) -> log.debug("Successfully remove {}",
+                                                     groupInfo.group),
+                            (objective, error) -> log.warn("Failed to remove {}: {}",
+                                                           groupInfo.group, error));
+                    // remove the flow rule
+                    flowObjectiveService.forward(groupInfo.getDevice(), fwdObject(next.getNextId(),
+                                                                                  groupInfo.group).remove(context));
+                    // remove all ports from the group
+                    next.getOutPorts().stream().forEach(portNumber ->
+                        flowObjectiveService.next(groupInfo.getDevice(), nextObject(next.getNextId(),
+                                                                                    portNumber,
+                                                                                    NextType.RemoveFromExisting,
+                                                                                    groupInfo.group))
+                    );
 
+                }
             });
             groups.clear();
         } finally {
