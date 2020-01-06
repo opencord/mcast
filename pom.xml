@@ -54,6 +54,7 @@
             <artifactId>onos-api</artifactId>
             <version>${onos.version}</version>
             <scope>provided</scope>
+            <classifier>tests</classifier>
         </dependency>
         <dependency>
             <groupId>org.onosproject</groupId>
@@ -72,6 +73,12 @@
             <artifactId>onos-apps-mcast-api</artifactId>
             <version>${onos.version}</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onlab-junit</artifactId>
+            <version>${onos.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
