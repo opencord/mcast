@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.onosproject</groupId>
         <artifactId>onos-dependencies</artifactId>
-        <version>1.13.9-rc4</version>
+        <version>1.13.10-rc2</version>
         <relativePath></relativePath>
     </parent>
 
@@ -35,13 +35,13 @@
 
     <properties>
         <onos.app.name>org.opencord.mcast</onos.app.name>
-        <onos.version>1.13.9-rc4</onos.version>
+        <onos.version>1.13.10-rc2</onos.version>
         <onos.app.category>Traffic Steering</onos.app.category>
         <onos.app.title>CORD Multicast App</onos.app.title>
         <onos.app.url>http://opencord.org</onos.app.url>
         <onos.app.requires>org.opencord.config</onos.app.requires>
-        <cord.config.version>1.4.0</cord.config.version>
-        <olt.api.version>1.4.0</olt.api.version>
+        <cord.config.version>1.5.0-SNAPSHOT</cord.config.version>
+        <olt.api.version>3.1.0-SNAPSHOT</olt.api.version>
     </properties>
 
     <dependencies>
@@ -85,6 +85,13 @@
                 </configuration>
             </plugin>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <configuration>
+                    <sourceDirectories>${project.build.sourceDirectory}</sourceDirectories>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-scr-plugin</artifactId>
                 <version>1.21.0</version>
@@ -106,7 +113,6 @@
             <plugin>
                 <groupId>org.onosproject</groupId>
                 <artifactId>onos-maven-plugin</artifactId>
-                <version>1.11</version>
                 <executions>
                     <execution>
                         <id>cfg</id>
@@ -138,7 +144,7 @@
         <repository>
             <id>central</id>
             <name>Central Repository</name>
-            <url>http://repo.maven.apache.org/maven2</url>
+            <url>https://repo.maven.apache.org/maven2</url>
             <layout>default</layout>
             <snapshots>
                 <enabled>false</enabled>
