@@ -15,19 +15,25 @@
  */
 package org.opencord.cordmcast;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.Set;
+import java.util.HashSet;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Iterator;
 
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.IpAddress;
+import org.onlab.packet.VlanId;
 import org.onosproject.TestApplicationId;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreServiceAdapter;
+import org.onosproject.event.DefaultEventSinkRegistry;
+import org.onosproject.event.Event;
+import org.onosproject.event.EventDeliveryService;
+import org.onosproject.event.EventSink;
 import org.onosproject.mastership.MastershipServiceAdapter;
 import org.onosproject.mcast.api.McastRoute;
 import org.onosproject.net.AnnotationKeys;
@@ -40,6 +46,9 @@ import org.onosproject.net.DeviceId;
 import org.onosproject.net.HostId;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.SparseAnnotations;
+import org.onosproject.net.config.Config;
+import org.onosproject.net.config.NetworkConfigRegistryAdapter;
+import org.onosproject.net.config.basics.McastConfig;
 import org.onosproject.net.device.DeviceServiceAdapter;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
@@ -56,6 +65,8 @@ import org.opencord.sadis.BandwidthProfileInformation;
 import org.opencord.sadis.BaseInformationService;
 import org.opencord.sadis.SadisService;
 import org.opencord.sadis.SubscriberAndDeviceInformation;
+
+import static com.google.common.base.Preconditions.checkState;
 
 public class McastTestBase {
 
@@ -86,8 +97,9 @@ public class McastTestBase {
      Map<HostId, Set<ConnectPoint>> sources = ImmutableMap.of(HOST_ID_NONE, SOURCES_CP);
 
      protected static final IpAddress MULTICAST_IP = IpAddress.valueOf("224.0.0.22");
+     protected static final IpAddress SOURCE_IP = IpAddress.valueOf("192.168.1.1");
      // Creating dummy route with IGMP type.
-     McastRoute route1 = new McastRoute(null, MULTICAST_IP, McastRoute.Type.IGMP);
+     McastRoute route1 = new McastRoute(SOURCE_IP, MULTICAST_IP, McastRoute.Type.IGMP);
 
      // Creating empty sink used in prevRoute
      Set<ConnectPoint> sinksCp = new HashSet<ConnectPoint>(Arrays.asList());
@@ -99,6 +111,9 @@ public class McastTestBase {
 
      // Flag to check unknown olt device
      boolean knownOltFlag = false;
+
+     // For the tests reduce events period to 1s
+     protected static final int EVENT_GENERATION_PERIOD = 1;
 
      class MockCoreService extends CoreServiceAdapter {
           @Override
@@ -140,6 +155,60 @@ public class McastTestBase {
         @Override
         public BaseInformationService<BandwidthProfileInformation> getBandwidthProfileService() {
             return null;
+        }
+    }
+
+    /**
+     * Mocks the McastConfig class to return vlan id value.
+     */
+    static class MockMcastConfig extends McastConfig {
+        @Override
+        public VlanId egressVlan() {
+            return VlanId.vlanId("4000");
+        }
+    }
+
+    /**
+     * Mocks the network config registry.
+     */
+    @SuppressWarnings("unchecked")
+    static final class TestNetworkConfigRegistry
+            extends NetworkConfigRegistryAdapter {
+        @Override
+        public <S, C extends Config<S>> C getConfig(S subject, Class<C> configClass) {
+            McastConfig mcastConfig = new MockMcastConfig();
+            return (C) mcastConfig;
+        }
+    }
+
+    public static class TestEventDispatcher extends DefaultEventSinkRegistry
+            implements EventDeliveryService {
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public synchronized void post(Event event) {
+            EventSink sink = getSink(event.getClass());
+            checkState(sink != null, "No sink for event %s", event);
+            sink.process(event);
+        }
+
+        @Override
+        public void setDispatchTimeLimit(long millis) {
+
+        }
+
+        @Override
+        public long getDispatchTimeLimit() {
+            return 0;
+        }
+    }
+
+    public static class MockCordMcastStatisticsEventListener implements CordMcastStatisticsEventListener {
+        protected List<CordMcastStatisticsEvent> mcastEventList = new ArrayList<CordMcastStatisticsEvent>();
+
+        @Override
+        public void event(CordMcastStatisticsEvent event) {
+            mcastEventList.add(event);
         }
     }
 

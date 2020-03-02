@@ -87,9 +87,10 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static org.onlab.util.Tools.get;
 import static org.onlab.util.Tools.groupedThreads;
-import static org.opencord.cordmcast.OsgiPropertyConstants.DEFAULT_VLAN_ENABLED;
+
 import static org.opencord.cordmcast.OsgiPropertyConstants.DEFAULT_PRIORITY;
 import static org.opencord.cordmcast.OsgiPropertyConstants.PRIORITY;
+import static org.opencord.cordmcast.OsgiPropertyConstants.DEFAULT_VLAN_ENABLED;
 import static org.opencord.cordmcast.OsgiPropertyConstants.VLAN_ENABLED;
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -145,7 +146,11 @@ public class CordMcast {
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected SadisService sadisService;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected CordMcastStatisticsService cordMcastStatisticsService;
+
     protected McastListener listener = new InternalMulticastListener();
+
     private InternalNetworkConfigListener configListener =
             new InternalNetworkConfigListener();
 
@@ -220,8 +225,24 @@ public class CordMcast {
 
         McastConfig config = networkConfig.getConfig(coreAppId, CORD_MCAST_CONFIG_CLASS);
         updateConfig(config);
-
         log.info("Started");
+    }
+
+    @Modified
+    public void modified(ComponentContext context) {
+        Dictionary<?, ?> properties = context != null ? context.getProperties() : new Properties();
+
+        String s = get(properties, VLAN_ENABLED);
+        vlanEnabled = isNullOrEmpty(s) ? DEFAULT_VLAN_ENABLED : Boolean.parseBoolean(s.trim());
+
+        try {
+            s = get(properties, PRIORITY);
+            priority = isNullOrEmpty(s) ? DEFAULT_PRIORITY : Integer.parseInt(s.trim());
+        } catch (NumberFormatException ne) {
+            log.error("Unable to parse configuration parameter for priority", ne);
+            priority = DEFAULT_PRIORITY;
+        }
+        cordMcastStatisticsService.setVlanValue(assignedVlan());
     }
 
     @Deactivate
@@ -274,26 +295,8 @@ public class CordMcast {
         return VlanId.vlanId(mcastVlan);
     }
 
-    private VlanId assignedVlan() {
+    protected VlanId assignedVlan() {
         return vlanEnabled ? multicastVlan() : VlanId.NONE;
-    }
-
-    @Modified
-    public void modified(ComponentContext context) {
-        Dictionary<?, ?> properties = context != null ? context.getProperties() : new Properties();
-
-        try {
-            String s = get(properties, "vlanEnabled");
-            vlanEnabled = isNullOrEmpty(s) ? DEFAULT_VLAN_ENABLED : Boolean.parseBoolean(s.trim());
-
-            s = get(properties, "priority");
-            priority = isNullOrEmpty(s) ? DEFAULT_PRIORITY : Integer.parseInt(s.trim());
-
-        } catch (Exception e) {
-            log.error("Unable to parse configuration parameter.", e);
-            vlanEnabled = false;
-            priority = DEFAULT_PRIORITY;
-        }
     }
 
     private class InternalMulticastListener implements McastListener {
@@ -427,6 +430,7 @@ public class CordMcast {
     }
 
     private void addSink(McastRoute route, ConnectPoint sink) {
+
         if (!isLocalLeader(sink.deviceId())) {
             log.debug("Not the leader of {}. Skip sink_added event for the sink {} and group {}",
                       sink.deviceId(), sink, route.group());

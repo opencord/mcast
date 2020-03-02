@@ -15,30 +15,25 @@
  */
 package org.opencord.cordmcast;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Dictionary;
-import java.util.HashSet;
-import java.util.Hashtable;
-import java.util.Map;
-import java.util.Set;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
+
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.onlab.junit.TestUtils;
+import org.onlab.packet.IpAddress;
+import org.onlab.packet.VlanId;
+import org.onosproject.cfg.ComponentConfigAdapter;
 import org.onosproject.cfg.ComponentConfigService;
 import org.onosproject.mcast.api.McastEvent;
+import org.onosproject.mcast.api.McastRoute;
 import org.onosproject.mcast.api.McastRouteUpdate;
 import org.onosproject.mcast.api.MulticastRouteService;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.HostId;
-import org.onosproject.net.config.NetworkConfigRegistryAdapter;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.IPCriterion;
@@ -49,11 +44,24 @@ import org.onosproject.store.service.TestConsistentMap;
 import org.osgi.service.component.ComponentContext;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+
+import java.util.Dictionary;
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.Set;
+import java.util.Map;
+import java.util.Arrays;
+import java.util.Collection;
+
+import static org.junit.Assert.*;
 import static org.onlab.junit.TestTools.assertAfter;
 
 public class McastTest extends McastTestBase {
 
   private CordMcast cordMcast;
+  private CordMcastStatisticsManager cordMcastStatisticsManager;
+
+  private MockCordMcastStatisticsEventListener mockListener = new MockCordMcastStatisticsEventListener();
 
   private static final int WAIT_TIMEOUT = 1000;
   private static final int WAIT = 250;
@@ -62,35 +70,50 @@ public class McastTest extends McastTestBase {
   @Before
   public void setUp() {
       cordMcast = new CordMcast();
+      cordMcastStatisticsManager = new CordMcastStatisticsManager();
 
       cordMcast.coreService = new MockCoreService();
+      cordMcast.networkConfig = new TestNetworkConfigRegistry();
       cordMcast.flowObjectiveService = new MockFlowObjectiveService();
       cordMcast.mastershipService = new TestMastershipService();
       cordMcast.deviceService = new MockDeviceService();
-      cordMcast.networkConfig = new NetworkConfigRegistryAdapter();
+      cordMcast.componentConfigService = new ComponentConfigAdapter();
+      cordMcastStatisticsManager.componentConfigService = new ComponentConfigAdapter();
+      cordMcastStatisticsManager.addListener(mockListener);
       cordMcast.sadisService = new MockSadisService();
+      cordMcast.cordMcastStatisticsService = cordMcastStatisticsManager;
 
-      cordMcast.storageService =
-             EasyMock.createMock(StorageServiceAdapter.class);
+      cordMcast.storageService = EasyMock.createMock(StorageServiceAdapter.class);
       expect(cordMcast.storageService.consistentMapBuilder()).andReturn(new TestConsistentMap.Builder<>());
       replay(cordMcast.storageService);
 
       Dictionary<String, Object> cfgDict = new Hashtable<String, Object>();
       cfgDict.put("vlanEnabled", false);
-      cordMcast.componentConfigService =
-             EasyMock.createNiceMock(ComponentConfigService.class);
+      cfgDict.put("eventGenerationPeriodInSeconds", EVENT_GENERATION_PERIOD);
+
+      cordMcast.componentConfigService = EasyMock.createNiceMock(ComponentConfigService.class);
       replay(cordMcast.componentConfigService);
+
+      Set<McastRoute> route1Set = new HashSet<McastRoute>();
+      route1Set.add(route1);
 
       cordMcast.mcastService = EasyMock.createNiceMock(MulticastRouteService.class);
       expect(cordMcast.mcastService.getRoutes()).andReturn(Sets.newHashSet());
       replay(cordMcast.mcastService);
 
+      cordMcastStatisticsManager.mcastService = EasyMock.createNiceMock(MulticastRouteService.class);
+      expect(cordMcastStatisticsManager.mcastService.getRoutes()).andReturn(route1Set).times(2);
+      replay(cordMcastStatisticsManager.mcastService);
+
+      TestUtils.setField(cordMcastStatisticsManager, "eventDispatcher", new TestEventDispatcher());
+
       ComponentContext componentContext = EasyMock.createMock(ComponentContext.class);
-      expect(componentContext.getProperties()).andReturn(cfgDict);
+      expect(componentContext.getProperties()).andReturn(cfgDict).times(2);
       replay(componentContext);
+      cordMcast.cordMcastStatisticsService = cordMcastStatisticsManager;
+      cordMcastStatisticsManager.activate(componentContext);
 
       cordMcast.activate(componentContext);
-
    }
 
     @After
@@ -289,7 +312,6 @@ public class McastTest extends McastTestBase {
 
    }
 
-
   @Test
   public void testSourceAddedEvent() throws InterruptedException {
 
@@ -324,4 +346,48 @@ public class McastTest extends McastTestBase {
       assertTrue(0 == nextMap.size());
    }
 
+    @Test
+    public void mcastTestEventGeneration() throws InterruptedException {
+      //fetching route details used to push CordMcastStatisticsEvent.
+      IpAddress testGroup = route1.group();
+      String testSource = route1.source().isEmpty() ? "*" : route1.source().get().toString();
+      VlanId testVlan = cordMcast.assignedVlan();
+
+      // Thread is scheduled without any delay
+      assertAfter(WAIT, WAIT * 2, () ->
+              assertEquals(1, mockListener.mcastEventList.size()));
+
+      for (CordMcastStatisticsEvent event: mockListener.mcastEventList) {
+           assertEquals(event.type(), CordMcastStatisticsEvent.Type.STATUS_UPDATE);
+      }
+
+      CordMcastStatistics cordMcastStatistics = mockListener.mcastEventList.get(0).subject().get(0);
+      assertEquals(VlanId.NONE, cordMcastStatistics.getVlanId());
+      assertEquals(testVlan, cordMcastStatistics.getVlanId());
+      assertEquals(testSource, cordMcastStatistics.getSourceAddress());
+      assertEquals(testGroup, cordMcastStatistics.getGroupAddress());
+
+      // Test for vlanEnabled
+      Dictionary<String, Object> cfgDict = new Hashtable<>();
+      cfgDict.put("vlanEnabled", true);
+
+      ComponentContext componentContext = EasyMock.createMock(ComponentContext.class);
+      expect(componentContext.getProperties()).andReturn(cfgDict);
+      replay(componentContext);
+      cordMcast.modified(componentContext);
+      testVlan = cordMcast.assignedVlan();
+
+      assertAfter(EVENT_GENERATION_PERIOD, EVENT_GENERATION_PERIOD * 1000, () ->
+              assertEquals(2, mockListener.mcastEventList.size()));
+
+      for (CordMcastStatisticsEvent event: mockListener.mcastEventList) {
+          assertEquals(event.type(), CordMcastStatisticsEvent.Type.STATUS_UPDATE);
+      }
+
+      cordMcastStatistics = mockListener.mcastEventList.get(1).subject().get(0);
+      assertNotEquals(VlanId.NONE, cordMcastStatistics.getVlanId());
+      assertEquals(testVlan, cordMcastStatistics.getVlanId());
+      assertEquals(testSource, cordMcastStatistics.getSourceAddress());
+      assertEquals(testGroup, cordMcastStatistics.getGroupAddress());
+    }
 }

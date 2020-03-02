@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-present Open Networking Foundation
+ * Copyright 2018-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,12 @@
 
 package org.opencord.cordmcast;
 
+import org.onosproject.event.EventListener;
+
 /**
- * Constants for default values of configurable properties.
+ * Listener for Mcast statistics events.
  */
-public final class OsgiPropertyConstants {
+public interface CordMcastStatisticsEventListener extends
+        EventListener<CordMcastStatisticsEvent> {
 
-    private OsgiPropertyConstants() {
-    }
-
-    public static final String VLAN_ENABLED = "vlanEnabled";
-    public static final boolean DEFAULT_VLAN_ENABLED = true;
-
-    public static final String PRIORITY = "priority";
-    public static final int DEFAULT_PRIORITY = 500;
-
-    public static final String EVENT_GENERATION_PERIOD = "eventGenerationPeriodInSeconds";
-    public static final int EVENT_GENERATION_PERIOD_DEFAULT = 30;
 }
