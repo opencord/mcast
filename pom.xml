@@ -37,9 +37,8 @@
         <onos.app.category>Traffic Steering</onos.app.category>
         <onos.app.title>CORD Multicast App</onos.app.title>
         <onos.app.url>http://opencord.org</onos.app.url>
-        <onos.app.requires>org.opencord.config</onos.app.requires>
-        <cord.config.version>2.0.0-SNAPSHOT</cord.config.version>
         <olt.api.version>4.0.0-SNAPSHOT</olt.api.version>
+        <sadis.api.version>5.0.0</sadis.api.version>
     </properties>
 
     <dependencies>
@@ -64,8 +63,8 @@
         </dependency>
         <dependency>
             <groupId>org.opencord</groupId>
-            <artifactId>cord-config</artifactId>
-            <version>${cord.config.version}</version>
+            <artifactId>sadis-api</artifactId>
+            <version>${sadis.api.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
