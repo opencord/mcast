@@ -39,7 +39,6 @@ import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.HostId;
 import org.onosproject.net.config.NetworkConfigRegistryAdapter;
-import org.onosproject.net.device.DeviceServiceAdapter;
 import org.onosproject.net.flow.FlowRuleServiceAdapter;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
@@ -69,9 +68,9 @@ public class McastTest extends McastTestBase {
       cordMcast.flowObjectiveService = new MockFlowObjectiveService();
       cordMcast.mastershipService = new TestMastershipService();
       cordMcast.flowRuleService = new FlowRuleServiceAdapter();
-      cordMcast.deviceService = new DeviceServiceAdapter();
+      cordMcast.deviceService = new MockDeviceService();
       cordMcast.networkConfig = new NetworkConfigRegistryAdapter();
-      cordMcast.cordConfigService = new MockCordConfigService();
+      cordMcast.sadisService = new MockSadisService();
 
       cordMcast.storageService =
              EasyMock.createMock(StorageServiceAdapter.class);

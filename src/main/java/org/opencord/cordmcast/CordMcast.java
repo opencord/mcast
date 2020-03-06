@@ -41,6 +41,7 @@ import org.onosproject.mcast.api.McastListener;
 import org.onosproject.mcast.api.McastRoute;
 import org.onosproject.mcast.api.MulticastRouteService;
 import org.onosproject.net.ConnectPoint;
+import org.onosproject.net.Device;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.HostId;
 import org.onosproject.net.PortNumber;
@@ -69,8 +70,8 @@ import org.onosproject.store.service.ConsistentMap;
 import org.onosproject.store.service.Serializer;
 import org.onosproject.store.service.StorageService;
 import org.onosproject.store.service.Versioned;
-import org.opencord.cordconfig.CordConfigService;
-import org.opencord.cordconfig.access.AccessDeviceData;
+import org.opencord.sadis.SadisService;
+import org.opencord.sadis.SubscriberAndDeviceInformation;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 
@@ -119,7 +120,7 @@ public class CordMcast {
     protected ComponentConfigService componentConfigService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected CordConfigService cordConfigService;
+    protected SadisService sadisService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected NetworkConfigRegistry networkConfig;
@@ -377,7 +378,7 @@ public class CordMcast {
             return;
         }
 
-        Optional<AccessDeviceData> oltInfo = cordConfigService.getAccessDevice(sink.deviceId());
+        Optional<SubscriberAndDeviceInformation> oltInfo = getSubscriberAndDeviceInformation(sink.deviceId());
 
         if (!oltInfo.isPresent()) {
             log.warn("Unknown OLT device : {}", sink.deviceId());
@@ -428,7 +429,7 @@ public class CordMcast {
             return;
         }
 
-        Optional<AccessDeviceData> oltInfo = cordConfigService.getAccessDevice(sink.deviceId());
+        Optional<SubscriberAndDeviceInformation> oltInfo = getSubscriberAndDeviceInformation(sink.deviceId());
 
         if (!oltInfo.isPresent()) {
             log.warn("Unknown OLT device : {}", sink.deviceId());
@@ -481,6 +482,40 @@ public class CordMcast {
             flowObjectiveService.forward(sink.deviceId(), fwdObject(newNextObj.id(),
                                                                     route.group()).add(context));
         }
+    }
+
+    /**
+     * Fetches device information associated with the device serial number from SADIS.
+     *
+     * @param serialNumber serial number of a device
+     * @return device information; an empty Optional otherwise.
+     */
+    private Optional<SubscriberAndDeviceInformation> getSubscriberAndDeviceInformation(String serialNumber) {
+        long start = System.currentTimeMillis();
+        try {
+            return Optional.ofNullable(sadisService.getSubscriberInfoService().get(serialNumber));
+        } finally {
+            if (log.isDebugEnabled()) {
+                // SADIS may call remote systems to fetch device data and this calls can take a long time.
+                // This measurement is just for monitoring these kinds of situations.
+                log.debug("Device fetched from SADIS. Elapsed {} msec", System.currentTimeMillis() - start);
+            }
+
+        }
+    }
+
+    /**
+     * Fetches device information associated with the device serial number from SADIS.
+     *
+     * @param deviceId device id
+     * @return device information; an empty Optional otherwise.
+     */
+    private Optional<SubscriberAndDeviceInformation> getSubscriberAndDeviceInformation(DeviceId deviceId) {
+        Device device = deviceService.getDevice(deviceId);
+        if (device == null || device.serialNumber() == null) {
+            return Optional.empty();
+        }
+        return getSubscriberAndDeviceInformation(device.serialNumber());
     }
 
     private class InternalNetworkConfigListener implements NetworkConfigListener {

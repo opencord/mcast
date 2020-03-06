@@ -15,27 +15,32 @@
  */
 package org.opencord.cordmcast;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
+import org.onlab.packet.Ip4Address;
 import org.onlab.packet.IpAddress;
-import org.onlab.packet.VlanId;
 import org.onosproject.TestApplicationId;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreServiceAdapter;
 import org.onosproject.mastership.MastershipServiceAdapter;
 import org.onosproject.mcast.api.McastRoute;
+import org.onosproject.net.AnnotationKeys;
+import org.onosproject.net.Annotations;
 import org.onosproject.net.ConnectPoint;
+import org.onosproject.net.DefaultAnnotations;
+import org.onosproject.net.DefaultDevice;
+import org.onosproject.net.Device;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.HostId;
 import org.onosproject.net.PortNumber;
+import org.onosproject.net.SparseAnnotations;
+import org.onosproject.net.device.DeviceServiceAdapter;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.Criterion;
@@ -45,14 +50,12 @@ import org.onosproject.net.flow.instructions.Instructions.OutputInstruction;
 import org.onosproject.net.flowobjective.FlowObjectiveServiceAdapter;
 import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.flowobjective.NextObjective;
-import org.opencord.cordconfig.CordConfigListener;
-import org.opencord.cordconfig.CordConfigService;
-import org.opencord.cordconfig.access.AccessAgentData;
-import org.opencord.cordconfig.access.AccessDeviceData;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.opencord.sadis.BandwidthProfileInformation;
+import org.opencord.sadis.BaseInformationService;
+import org.opencord.sadis.SadisService;
+import org.opencord.sadis.SubscriberAndDeviceInformation;
 
 public class McastTestBase {
 
@@ -72,6 +75,10 @@ public class McastTestBase {
      protected static final ConnectPoint CONNECT_POINT_B = new ConnectPoint(DEVICE_ID_OF_A, PORT_B);
      protected static final ConnectPoint CONNECT_POINT_C = new ConnectPoint(DEVICE_ID_OF_A, PORT_C);
 
+     // serial number of the device A
+     protected static final String SERIAL_NUMBER_OF_DEVICE_A = "serialNumberOfDevA";
+     // Management ip address of the device A
+     protected static final Ip4Address MANAGEMENT_IP_OF_A = Ip4Address.valueOf("10.177.125.4");
      //Host id configuration
      protected static final HostId HOST_ID_NONE = HostId.NONE;
      // Source connect point
@@ -123,65 +130,70 @@ public class McastTestBase {
           }
      }
 
-     class MockCordConfigService implements CordConfigService {
+    protected class MockSadisService implements SadisService {
 
-          @Override
-          public void addListener(CordConfigListener listener) {
+        @Override
+        public BaseInformationService<SubscriberAndDeviceInformation> getSubscriberInfoService() {
+            return new MockSubService();
+        }
 
-          }
+        @Override
+        public BaseInformationService<BandwidthProfileInformation> getBandwidthProfileService() {
+            return null;
+        }
+    }
 
-          @Override
-          public void removeListener(CordConfigListener listener) {
+    private class MockSubService implements BaseInformationService<SubscriberAndDeviceInformation> {
+        MockSubscriberAndDeviceInformation deviceA =
+                new MockSubscriberAndDeviceInformation(SERIAL_NUMBER_OF_DEVICE_A, MANAGEMENT_IP_OF_A);
 
-          }
+        @Override
+        public SubscriberAndDeviceInformation get(String id) {
+            return SERIAL_NUMBER_OF_DEVICE_A.equals(id) ? deviceA : null;
+        }
 
-          @Override
-          public Set<AccessDeviceData> getAccessDevices() {
+        @Override
+        public void invalidateAll() {
+        }
 
-               return null;
-          }
+        @Override
+        public void invalidateId(String id) {
+        }
 
-          @Override
-          public Optional<AccessDeviceData> getAccessDevice(DeviceId deviceId) {
-             if (deviceId == DEVICE_ID_OF_A) {
-               PortNumber uplink = PortNumber.portNumber(3);
-               VlanId vlan = VlanId.vlanId((short) 0);
-               ObjectMapper mapper = new ObjectMapper();
-               JsonNode defaultVlanNode = null;
-               try {
-                    defaultVlanNode =
-                    (JsonNode) mapper.readTree("{\"driver\":\"pmc-olt\" , \"type \" : \"OLT\"}");
-               } catch (IOException e) {
-                    e.printStackTrace();
-               }
+        @Override
+        public SubscriberAndDeviceInformation getfromCache(String id) {
+            return null;
+        }
+    }
 
-               Optional<VlanId> defaultVlan;
-               if (defaultVlanNode.isMissingNode()) {
-                    defaultVlan = Optional.empty();
-               } else {
-                    defaultVlan = Optional.of(VlanId.vlanId(defaultVlanNode.shortValue()));
-               }
-               Optional<AccessDeviceData> accessDeviceData = null;
-               AccessDeviceData accessDevice = new AccessDeviceData(deviceId, uplink, vlan, defaultVlan);
-               accessDeviceData = Optional.of(accessDevice);
-               return accessDeviceData;
-             } else {
-                 knownOltFlag = true;
-                 return Optional.empty();
-             }
-          }
+    private class MockSubscriberAndDeviceInformation extends SubscriberAndDeviceInformation {
 
-          @Override
-          public Set<AccessAgentData> getAccessAgents() {
-               return null;
-          }
+        MockSubscriberAndDeviceInformation(String id, Ip4Address ipAddress) {
+            this.setId(id);
+            this.setIPAddress(ipAddress);
+            this.setUplinkPort((int) PORT_A.toLong());
+        }
+    }
 
-          @Override
-          public Optional<AccessAgentData> getAccessAgent(DeviceId deviceId) {
-               return null;
-          }
+    class MockDeviceService extends DeviceServiceAdapter {
 
-     }
+        @Override
+        public Device getDevice(DeviceId deviceId) {
+            if (DEVICE_ID_OF_A.equals(deviceId)) {
+                DefaultAnnotations.Builder annotationsBuilder = DefaultAnnotations.builder()
+                        .set(AnnotationKeys.MANAGEMENT_ADDRESS, MANAGEMENT_IP_OF_A.toString());
+                SparseAnnotations annotations = annotationsBuilder.build();
+                Annotations[] da = {annotations};
+
+                Device deviceA = new DefaultDevice(null, DEVICE_ID_OF_A, Device.Type.OTHER, "", "",
+                        "", SERIAL_NUMBER_OF_DEVICE_A, null, da);
+                return deviceA;
+            } else {
+                knownOltFlag = true;
+            }
+            return null;
+        }
+    }
 
      public OutputInstruction outputPort(TrafficTreatment trafficTreatment) {
          List<Instruction> listOfInstructions = trafficTreatment.allInstructions();
