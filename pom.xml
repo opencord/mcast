@@ -37,7 +37,6 @@
         <onos.app.category>Traffic Steering</onos.app.category>
         <onos.app.title>CORD Multicast App</onos.app.title>
         <onos.app.url>http://opencord.org</onos.app.url>
-        <olt.api.version>4.0.0-SNAPSHOT</olt.api.version>
         <sadis.api.version>5.0.0</sadis.api.version>
     </properties>
 
