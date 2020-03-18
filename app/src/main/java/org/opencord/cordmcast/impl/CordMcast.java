@@ -157,6 +157,7 @@ public class CordMcast implements CordMcastService {
     private ApplicationId appId;
     private ApplicationId coreAppId;
     private short mcastVlan = DEFAULT_MCAST_VLAN;
+    private VlanId mcastInnerVlan = VlanId.NONE;
 
     /**
      * Whether to use VLAN for multicast traffic.
@@ -295,6 +296,10 @@ public class CordMcast implements CordMcastService {
 
     protected VlanId assignedVlan() {
         return vlanEnabled ? multicastVlan() : VlanId.NONE;
+    }
+
+    protected VlanId assignedInnerVlan() {
+        return vlanEnabled ? mcastInnerVlan : VlanId.NONE;
     }
 
     private class InternalMulticastListener implements McastListener {
@@ -471,13 +476,13 @@ public class CordMcast implements CordMcastService {
         }
 
         ObjectiveContext context = new DefaultObjectiveContext(
-                (objective) -> log.debug("Successfully add {} on {}/{}, vlan {}",
+                (objective) -> log.debug("Successfully add {} on {}/{}, vlan {}, inner vlan {}",
                                          route.group(), sink.deviceId(), sink.port().toLong(),
-                                         assignedVlan()),
+                                         assignedVlan(), assignedInnerVlan()),
                 (objective, error) -> {
-                    log.warn("Failed to add {} on {}/{}, vlan {}: {}",
+                    log.warn("Failed to add {} on {}/{}, vlan {}, inner vlan {}: {}",
                              route.group(), sink.deviceId(), sink.port().toLong(), assignedVlan(),
-                             error);
+                             assignedInnerVlan(), error);
                 });
 
         flowObjectiveService.next(sink.deviceId(), newNextObj);
@@ -538,7 +543,8 @@ public class CordMcast implements CordMcastService {
                                 //TODO: Simply remove flows/groups, hosts will response period query
                                 // and re-sent IGMP report, so the flows can be rebuild.
                                 // However, better to remove and re-add mcast flow rules here
-                                if (mcastVlan != config.egressVlan().toShort() && vlanEnabled) {
+                                if (vlanEnabled && (mcastVlan != config.egressVlan().toShort() ||
+                                                    !mcastInnerVlan.equals(config.egressInnerVlan()))) {
                                     clearGroups();
                                 }
                                 updateConfig(config);
@@ -564,6 +570,9 @@ public class CordMcast implements CordMcastService {
 
         if (config.egressVlan() != null) {
             mcastVlan = config.egressVlan().toShort();
+        }
+        if (config.egressInnerVlan() != null) {
+            mcastInnerVlan = config.egressInnerVlan();
         }
     }
 
@@ -644,6 +653,10 @@ public class CordMcast implements CordMcastService {
 
         if (vlanEnabled) {
             metadata.matchVlanId(multicastVlan());
+
+            if (!mcastInnerVlan.equals(VlanId.NONE)) {
+                metadata.matchInnerVlanId(mcastInnerVlan);
+            }
         }
 
         DefaultNextObjective.Builder build = DefaultNextObjective.builder()
@@ -690,6 +703,10 @@ public class CordMcast implements CordMcastService {
         TrafficSelector.Builder metabuilder = DefaultTrafficSelector.builder();
         if (vlanEnabled) {
             metabuilder.matchVlanId(multicastVlan());
+
+            if (!mcastInnerVlan.equals(VlanId.NONE)) {
+                metabuilder.matchInnerVlanId(mcastInnerVlan);
+            }
         }
 
         ForwardingObjective.Builder fwdBuilder = DefaultForwardingObjective.builder()

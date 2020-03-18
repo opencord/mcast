@@ -168,6 +168,11 @@ public class McastTestBase {
         public VlanId egressVlan() {
             return VlanId.vlanId("4000");
         }
+
+        @Override
+        public VlanId egressInnerVlan() {
+            return VlanId.NONE;
+        }
     }
 
     /**
