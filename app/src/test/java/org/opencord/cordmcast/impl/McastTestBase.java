@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.opencord.cordmcast;
+package org.opencord.cordmcast.impl;
 
 import java.util.List;
 import java.util.Map;
@@ -61,6 +61,8 @@ import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.flowobjective.NextObjective;
 
 import com.google.common.collect.ImmutableMap;
+import org.opencord.cordmcast.CordMcastStatisticsEvent;
+import org.opencord.cordmcast.CordMcastStatisticsEventListener;
 import org.opencord.sadis.BandwidthProfileInformation;
 import org.opencord.sadis.BaseInformationService;
 import org.opencord.sadis.SadisService;

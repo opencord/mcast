@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-present Open Networking Foundation
+ * Copyright 2018-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,23 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.opencord.cordmcast;
 
+import org.onlab.packet.VlanId;
+import org.onosproject.event.ListenerService;
+
 /**
- * Constants for default values of configurable properties.
+ * Service for interacting with CordMcastStatisticsEvent data.
  */
-public final class OsgiPropertyConstants {
-
-    private OsgiPropertyConstants() {
-    }
-
-    public static final String VLAN_ENABLED = "vlanEnabled";
-    public static final boolean DEFAULT_VLAN_ENABLED = true;
-
-    public static final String PRIORITY = "priority";
-    public static final int DEFAULT_PRIORITY = 500;
-
-    public static final String EVENT_GENERATION_PERIOD = "eventGenerationPeriodInSeconds";
-    public static final int EVENT_GENERATION_PERIOD_DEFAULT = 30;
+public interface CordMcastStatisticsService
+        extends ListenerService<CordMcastStatisticsEvent, CordMcastStatisticsEventListener> {
+    /**
+     * To set current vlanValue in Statistics Service.
+     * @param vlanValue current vlan value.
+     */
+    public void setVlanValue(VlanId vlanValue);
 }

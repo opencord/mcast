@@ -22,72 +22,24 @@
     <parent>
         <groupId>org.onosproject</groupId>
         <artifactId>onos-dependencies</artifactId>
-        <version>2.2.1-b3</version>
+        <version>2.2.1</version>
     </parent>
 
     <groupId>org.opencord</groupId>
     <artifactId>mcast</artifactId>
     <version>2.0.0-SNAPSHOT</version>
-    <packaging>bundle</packaging>
+    <packaging>pom</packaging>
 
     <description>CORD Multicast application</description>
 
     <properties>
-        <onos.app.name>org.opencord.mcast</onos.app.name>
-        <onos.app.category>Traffic Steering</onos.app.category>
-        <onos.app.title>CORD Multicast App</onos.app.title>
-        <onos.app.url>http://opencord.org</onos.app.url>
         <sadis.api.version>5.0.0</sadis.api.version>
     </properties>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.onosproject</groupId>
-            <artifactId>onlab-osgi</artifactId>
-            <version>${onos.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.onosproject</groupId>
-            <artifactId>onos-api</artifactId>
-            <version>${onos.version}</version>
-            <scope>provided</scope>
-            <classifier>tests</classifier>
-        </dependency>
-        <dependency>
-            <groupId>org.onosproject</groupId>
-            <artifactId>onos-core-serializers</artifactId>
-            <version>${onos.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.opencord</groupId>
-            <artifactId>sadis-api</artifactId>
-            <version>${sadis.api.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.onosproject</groupId>
-            <artifactId>onos-apps-mcast-api</artifactId>
-            <version>${onos.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.onosproject</groupId>
-            <artifactId>onlab-junit</artifactId>
-            <version>${onos.version}</version>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.onosproject</groupId>
-                <artifactId>onos-maven-plugin</artifactId>
-            </plugin>
-        </plugins>
-    </build>
+    <modules>
+        <module>api</module>
+        <module>app</module>
+    </modules>
 
     <repositories>
         <repository>

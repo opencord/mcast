@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-present Open Networking Foundation
+ * Copyright 2020-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,19 +15,9 @@
  */
 package org.opencord.cordmcast;
 
-import org.onlab.packet.VlanId;
-import org.onosproject.event.ListenerService;
-
 /**
- * Service for interacting with CordMcastStatisticsEvent data.
+ * CORD multicast provisioning application.
  */
-public interface CordMcastStatisticsService
-        extends ListenerService<CordMcastStatisticsEvent, CordMcastStatisticsEventListener> {
+public interface CordMcastService {
 
-
-    /**
-     * To set current vlanValue in Statistics Service.
-     * @param vlanValue current vlan value.
-     */
-    public void setVlanValue(VlanId vlanValue);
 }

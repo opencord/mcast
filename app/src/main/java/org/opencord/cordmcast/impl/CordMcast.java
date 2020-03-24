@@ -13,20 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.opencord.cordmcast;
+package org.opencord.cordmcast.impl;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.onosproject.net.Device;
-import org.opencord.sadis.SadisService;
-import org.opencord.sadis.SubscriberAndDeviceInformation;
-import org.osgi.service.component.annotations.Activate;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Deactivate;
-import org.osgi.service.component.annotations.Modified;
-import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.onlab.packet.Ethernet;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.VlanId;
@@ -43,6 +34,7 @@ import org.onosproject.mcast.api.McastListener;
 import org.onosproject.mcast.api.McastRoute;
 import org.onosproject.mcast.api.MulticastRouteService;
 import org.onosproject.net.ConnectPoint;
+import org.onosproject.net.Device;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.HostId;
 import org.onosproject.net.PortNumber;
@@ -70,7 +62,17 @@ import org.onosproject.store.service.ConsistentMap;
 import org.onosproject.store.service.Serializer;
 import org.onosproject.store.service.StorageService;
 import org.onosproject.store.service.Versioned;
+import org.opencord.cordmcast.CordMcastService;
+import org.opencord.cordmcast.CordMcastStatisticsService;
+import org.opencord.sadis.SadisService;
+import org.opencord.sadis.SubscriberAndDeviceInformation;
 import org.osgi.service.component.ComponentContext;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Modified;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 
 import java.util.Dictionary;
@@ -87,11 +89,7 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static org.onlab.util.Tools.get;
 import static org.onlab.util.Tools.groupedThreads;
-
-import static org.opencord.cordmcast.OsgiPropertyConstants.DEFAULT_PRIORITY;
-import static org.opencord.cordmcast.OsgiPropertyConstants.PRIORITY;
-import static org.opencord.cordmcast.OsgiPropertyConstants.DEFAULT_VLAN_ENABLED;
-import static org.opencord.cordmcast.OsgiPropertyConstants.VLAN_ENABLED;
+import static org.opencord.cordmcast.impl.OsgiPropertyConstants.*;
 import static org.slf4j.LoggerFactory.getLogger;
 
 
@@ -105,8 +103,8 @@ import static org.slf4j.LoggerFactory.getLogger;
         VLAN_ENABLED + ":Boolean=" + DEFAULT_VLAN_ENABLED,
         PRIORITY + ":Integer=" + DEFAULT_PRIORITY,
 })
-public class CordMcast {
-    private static final String APP_NAME = "org.opencord.cordmcast";
+public class CordMcast implements CordMcastService {
+    private static final String APP_NAME = "org.opencord.mcast";
 
     private final Logger log = getLogger(getClass());
 

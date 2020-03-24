@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.opencord.cordmcast;
+package org.opencord.cordmcast.impl;
 
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
@@ -41,6 +41,8 @@ import org.onosproject.net.flow.instructions.Instructions.OutputInstruction;
 import org.onosproject.net.flowobjective.Objective;
 import org.onosproject.store.service.StorageServiceAdapter;
 import org.onosproject.store.service.TestConsistentMap;
+import org.opencord.cordmcast.CordMcastStatistics;
+import org.opencord.cordmcast.CordMcastStatisticsEvent;
 import org.osgi.service.component.ComponentContext;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;

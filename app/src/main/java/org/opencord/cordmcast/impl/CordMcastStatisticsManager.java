@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.opencord.cordmcast;
+package org.opencord.cordmcast.impl;
 
 
 import org.onlab.packet.VlanId;
@@ -22,6 +22,10 @@ import org.onosproject.cfg.ComponentConfigService;
 import org.onosproject.event.AbstractListenerManager;
 import org.onosproject.mcast.api.McastRoute;
 import org.onosproject.mcast.api.MulticastRouteService;
+import org.opencord.cordmcast.CordMcastStatistics;
+import org.opencord.cordmcast.CordMcastStatisticsEvent;
+import org.opencord.cordmcast.CordMcastStatisticsEventListener;
+import org.opencord.cordmcast.CordMcastStatisticsService;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Activate;
@@ -44,8 +48,8 @@ import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static org.onlab.util.Tools.get;
-import static org.opencord.cordmcast.OsgiPropertyConstants.EVENT_GENERATION_PERIOD;
-import static org.opencord.cordmcast.OsgiPropertyConstants.EVENT_GENERATION_PERIOD_DEFAULT;
+import static org.opencord.cordmcast.impl.OsgiPropertyConstants.EVENT_GENERATION_PERIOD;
+import static org.opencord.cordmcast.impl.OsgiPropertyConstants.EVENT_GENERATION_PERIOD_DEFAULT;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
