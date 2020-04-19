@@ -27,5 +27,11 @@ public interface CordMcastStatisticsService
      * To set current vlanValue in Statistics Service.
      * @param vlanValue current vlan value.
      */
-    public void setVlanValue(VlanId vlanValue);
+    void setVlanValue(VlanId vlanValue);
+
+    /**
+     * To set current innerVlanValue in Statistics Service.
+     * @param innerVlanValue current inner vlan value.
+     */
+    void setInnerVlanValue(VlanId innerVlanValue);
 }

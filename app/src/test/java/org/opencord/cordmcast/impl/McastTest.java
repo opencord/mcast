@@ -36,7 +36,9 @@ import org.onosproject.net.DeviceId;
 import org.onosproject.net.HostId;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
+import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.IPCriterion;
+import org.onosproject.net.flow.criteria.VlanIdCriterion;
 import org.onosproject.net.flow.instructions.Instructions.OutputInstruction;
 import org.onosproject.net.flowobjective.Objective;
 import org.onosproject.store.service.StorageServiceAdapter;
@@ -71,51 +73,7 @@ public class McastTest extends McastTestBase {
 
   @Before
   public void setUp() {
-      cordMcast = new CordMcast();
-      cordMcastStatisticsManager = new CordMcastStatisticsManager();
-
-      cordMcast.coreService = new MockCoreService();
-      cordMcast.networkConfig = new TestNetworkConfigRegistry();
-      cordMcast.flowObjectiveService = new MockFlowObjectiveService();
-      cordMcast.mastershipService = new TestMastershipService();
-      cordMcast.deviceService = new MockDeviceService();
-      cordMcast.componentConfigService = new ComponentConfigAdapter();
-      cordMcastStatisticsManager.componentConfigService = new ComponentConfigAdapter();
-      cordMcastStatisticsManager.addListener(mockListener);
-      cordMcast.sadisService = new MockSadisService();
-      cordMcast.cordMcastStatisticsService = cordMcastStatisticsManager;
-
-      cordMcast.storageService = EasyMock.createMock(StorageServiceAdapter.class);
-      expect(cordMcast.storageService.consistentMapBuilder()).andReturn(new TestConsistentMap.Builder<>());
-      replay(cordMcast.storageService);
-
-      Dictionary<String, Object> cfgDict = new Hashtable<String, Object>();
-      cfgDict.put("vlanEnabled", false);
-      cfgDict.put("eventGenerationPeriodInSeconds", EVENT_GENERATION_PERIOD);
-
-      cordMcast.componentConfigService = EasyMock.createNiceMock(ComponentConfigService.class);
-      replay(cordMcast.componentConfigService);
-
-      Set<McastRoute> route1Set = new HashSet<McastRoute>();
-      route1Set.add(route1);
-
-      cordMcast.mcastService = EasyMock.createNiceMock(MulticastRouteService.class);
-      expect(cordMcast.mcastService.getRoutes()).andReturn(Sets.newHashSet());
-      replay(cordMcast.mcastService);
-
-      cordMcastStatisticsManager.mcastService = EasyMock.createNiceMock(MulticastRouteService.class);
-      expect(cordMcastStatisticsManager.mcastService.getRoutes()).andReturn(route1Set).times(2);
-      replay(cordMcastStatisticsManager.mcastService);
-
-      TestUtils.setField(cordMcastStatisticsManager, "eventDispatcher", new TestEventDispatcher());
-
-      ComponentContext componentContext = EasyMock.createMock(ComponentContext.class);
-      expect(componentContext.getProperties()).andReturn(cfgDict).times(2);
-      replay(componentContext);
-      cordMcast.cordMcastStatisticsService = cordMcastStatisticsManager;
-      cordMcastStatisticsManager.activate(componentContext);
-
-      cordMcast.activate(componentContext);
+        //setup operation is handled by init() method in each test
    }
 
     @After
@@ -125,8 +83,61 @@ public class McastTest extends McastTestBase {
       nextMap.clear();
     }
 
+    private void init(boolean vlanEnabled, VlanId egressVlan, VlanId egressInnerVlan) {
+        cordMcast = new CordMcast();
+        cordMcastStatisticsManager = new CordMcastStatisticsManager();
+        cordMcast.coreService = new MockCoreService();
+
+        TestNetworkConfigRegistry testNetworkConfigRegistry = new TestNetworkConfigRegistry();
+        testNetworkConfigRegistry.setEgressVlan(egressVlan);
+        testNetworkConfigRegistry.setEgressInnerVlan(egressInnerVlan);
+        cordMcast.networkConfig = testNetworkConfigRegistry;
+
+        cordMcast.flowObjectiveService = new MockFlowObjectiveService();
+        cordMcast.mastershipService = new TestMastershipService();
+        cordMcast.deviceService = new MockDeviceService();
+        cordMcast.componentConfigService = new ComponentConfigAdapter();
+        cordMcastStatisticsManager.componentConfigService = new ComponentConfigAdapter();
+        cordMcastStatisticsManager.addListener(mockListener);
+        cordMcast.sadisService = new MockSadisService();
+        cordMcast.cordMcastStatisticsService = cordMcastStatisticsManager;
+
+        cordMcast.storageService = EasyMock.createMock(StorageServiceAdapter.class);
+        expect(cordMcast.storageService.consistentMapBuilder()).andReturn(new TestConsistentMap.Builder<>());
+        replay(cordMcast.storageService);
+
+        Dictionary<String, Object> cfgDict = new Hashtable<String, Object>();
+        cfgDict.put("vlanEnabled", vlanEnabled);
+        cfgDict.put("eventGenerationPeriodInSeconds", EVENT_GENERATION_PERIOD);
+
+        cordMcast.componentConfigService = EasyMock.createNiceMock(ComponentConfigService.class);
+        replay(cordMcast.componentConfigService);
+
+        Set<McastRoute> route1Set = new HashSet<McastRoute>();
+        route1Set.add(route1);
+
+        cordMcast.mcastService = EasyMock.createNiceMock(MulticastRouteService.class);
+        expect(cordMcast.mcastService.getRoutes()).andReturn(Sets.newHashSet());
+        replay(cordMcast.mcastService);
+
+        cordMcastStatisticsManager.mcastService = EasyMock.createNiceMock(MulticastRouteService.class);
+        expect(cordMcastStatisticsManager.mcastService.getRoutes()).andReturn(route1Set).times(2);
+        replay(cordMcastStatisticsManager.mcastService);
+
+        TestUtils.setField(cordMcastStatisticsManager, "eventDispatcher", new TestEventDispatcher());
+
+        ComponentContext componentContext = EasyMock.createMock(ComponentContext.class);
+        expect(componentContext.getProperties()).andReturn(cfgDict).times(2);
+        replay(componentContext);
+        cordMcast.cordMcastStatisticsService = cordMcastStatisticsManager;
+        cordMcastStatisticsManager.activate(componentContext);
+
+        cordMcast.activate(componentContext);
+    }
+
     @Test
     public void testAddingSinkEvent() throws InterruptedException {
+      init(false, null, null);
 
       Set<ConnectPoint> sinks2Cp = new HashSet<ConnectPoint>(Arrays.asList(CONNECT_POINT_B));
       Map<HostId, Set<ConnectPoint>> sinks2 = ImmutableMap.of(HOST_ID_NONE, sinks2Cp);
@@ -160,12 +171,109 @@ public class McastTest extends McastTestBase {
       IPCriterion ipCriterion = ipAddress(trafficSelector);
       assertNotNull(ipCriterion);
       assertTrue(MULTICAST_IP.equals(ipCriterion.ip().address()));
+      //checking the vlan criterion
+      TrafficSelector meta = forwardMap.get(DEVICE_ID_OF_A).meta();
+      VlanIdCriterion vlanId = vlanId(meta, Criterion.Type.VLAN_VID);
+      assertNull(vlanId); //since vlanEnabled flag is false
+      VlanIdCriterion innerVlanIdCriterion = vlanId(meta, Criterion.Type.INNER_VLAN_VID);
+      assertNull(innerVlanIdCriterion);
+    }
 
+    @Test
+    public void testAddingSinkEventVlanEnabled() throws InterruptedException {
+        // vlanEnabled is set to true and just egressVlan is set
+        init(true, VlanId.vlanId("4000"), null);
+
+        Set<ConnectPoint> sinks2Cp = new HashSet<ConnectPoint>(Arrays.asList(CONNECT_POINT_B));
+        Map<HostId, Set<ConnectPoint>> sinks2 = ImmutableMap.of(HOST_ID_NONE, sinks2Cp);
+
+        //Adding the details to create different routes
+        previousSubject = McastRouteUpdate.mcastRouteUpdate(route1, sources, sinks);
+        currentSubject = McastRouteUpdate.mcastRouteUpdate(route1, sources, sinks2);
+        // Creating new mcast event for adding sink
+        McastEvent event = new McastEvent(McastEvent.Type.SINKS_ADDED, previousSubject, currentSubject);
+        cordMcast.listener.event(event);
+        synchronized (forwardMap) {
+            forwardMap.wait(WAIT_TIMEOUT);
+        }
+        // ForwardMap will contain the operation "Add" in the flowObjective. None -> CP_B
+        assertNotNull(forwardMap.get(DEVICE_ID_OF_A));
+        assertTrue(forwardMap.get(DEVICE_ID_OF_A).op() == Objective.Operation.ADD);
+
+        // Output port number will be PORT_B i.e. 16
+        Collection<TrafficTreatment> traffictreatMentCollection =
+                nextMap.get(DEVICE_ID_OF_A).next();
+        assertTrue(1 == traffictreatMentCollection.size());
+        OutputInstruction output = null;
+        for (TrafficTreatment trafficTreatment : traffictreatMentCollection) {
+            output = outputPort(trafficTreatment);
+        }
+        assertNotNull(output);
+        assertTrue(PORT_B == output.port());
+        // Checking the group ip address
+        TrafficSelector trafficSelector = forwardMap.get(DEVICE_ID_OF_A).selector();
+        IPCriterion ipCriterion = ipAddress(trafficSelector);
+        assertNotNull(ipCriterion);
+        assertTrue(MULTICAST_IP.equals(ipCriterion.ip().address()));
+        //checking the vlan criteria
+        TrafficSelector meta = forwardMap.get(DEVICE_ID_OF_A).meta();
+        VlanIdCriterion vlanIdCriterion = vlanId(meta, Criterion.Type.VLAN_VID);
+        assertNotNull(vlanIdCriterion); //since vlanEnabled flag is true
+        assertEquals(cordMcast.assignedVlan(), vlanIdCriterion.vlanId());
+        VlanIdCriterion innerVlanIdCriterion = vlanId(meta, Criterion.Type.INNER_VLAN_VID);
+        assertNull(innerVlanIdCriterion);
+    }
+
+    @Test
+    public void testAddingSinkEventInnerVlanEnabled() throws InterruptedException {
+        // vlanEnabled is set to true and egressVlan & egressInnerVlan are set
+        init(true, VlanId.vlanId("4000"), VlanId.vlanId("1000"));
+
+        Set<ConnectPoint> sinks2Cp = new HashSet<ConnectPoint>(Arrays.asList(CONNECT_POINT_B));
+        Map<HostId, Set<ConnectPoint>> sinks2 = ImmutableMap.of(HOST_ID_NONE, sinks2Cp);
+
+        //Adding the details to create different routes
+        previousSubject = McastRouteUpdate.mcastRouteUpdate(route1, sources, sinks);
+        currentSubject = McastRouteUpdate.mcastRouteUpdate(route1, sources, sinks2);
+        // Creating new mcast event for adding sink
+        McastEvent event = new McastEvent(McastEvent.Type.SINKS_ADDED, previousSubject, currentSubject);
+        cordMcast.listener.event(event);
+        synchronized (forwardMap) {
+            forwardMap.wait(WAIT_TIMEOUT);
+        }
+
+        // ForwardMap will contain the operation "Add" in the flowObjective. None -> CP_B
+        assertNotNull(forwardMap.get(DEVICE_ID_OF_A));
+        assertTrue(forwardMap.get(DEVICE_ID_OF_A).op() == Objective.Operation.ADD);
+
+        // Output port number will be PORT_B i.e. 16
+        Collection<TrafficTreatment> traffictreatMentCollection =
+                nextMap.get(DEVICE_ID_OF_A).next();
+        assertTrue(1 == traffictreatMentCollection.size());
+        OutputInstruction output = null;
+        for (TrafficTreatment trafficTreatment : traffictreatMentCollection) {
+            output = outputPort(trafficTreatment);
+        }
+        assertNotNull(output);
+        assertTrue(PORT_B == output.port());
+        // Checking the group ip address
+        TrafficSelector trafficSelector = forwardMap.get(DEVICE_ID_OF_A).selector();
+        IPCriterion ipCriterion = ipAddress(trafficSelector);
+        assertNotNull(ipCriterion);
+        assertTrue(MULTICAST_IP.equals(ipCriterion.ip().address()));
+        //checking the vlan criteria
+        TrafficSelector meta = forwardMap.get(DEVICE_ID_OF_A).meta();
+        VlanIdCriterion vlanIdCriterion = vlanId(meta, Criterion.Type.VLAN_VID);
+        assertNotNull(vlanIdCriterion); //since vlanEnabled flag is true
+        assertEquals(cordMcast.assignedVlan(), vlanIdCriterion.vlanId());
+        VlanIdCriterion innerVlanIdCriterion = vlanId(meta, Criterion.Type.INNER_VLAN_VID);
+        assertNotNull(innerVlanIdCriterion);
+        assertEquals(cordMcast.assignedInnerVlan(), innerVlanIdCriterion.vlanId());
     }
 
     @Test
     public void testAddToExistingSinkEvent() throws InterruptedException {
-
+      init(false, null, null);
        // Adding first sink (none --> CP_B)
        testAddingSinkEvent();
 
@@ -195,7 +303,7 @@ public class McastTest extends McastTestBase {
 
     @Test
     public void testRemoveSinkEvent() throws InterruptedException {
-
+       init(false, null, null);
        testAddToExistingSinkEvent();
        // Handling the mcast event for removing sink.
        Set<ConnectPoint> sinksCp = new HashSet<ConnectPoint>(Arrays.asList(CONNECT_POINT_B, CONNECT_POINT_C));
@@ -226,7 +334,7 @@ public class McastTest extends McastTestBase {
 
     @Test
     public void testRemoveLastSinkEvent() throws InterruptedException {
-
+        init(false, null, null);
        testRemoveSinkEvent();
        // Handling the mcast event for removing sink.
        Set<ConnectPoint> sinksCp = new HashSet<ConnectPoint>(Arrays.asList(CONNECT_POINT_C));
@@ -255,7 +363,7 @@ public class McastTest extends McastTestBase {
 
   @Test
   public void testUnkownOltDevice() throws InterruptedException {
-
+       init(false, null, null);
        // Configuration of mcast event for unknown olt device
        final DeviceId deviceIdOfB = DeviceId.deviceId("of:1");
 
@@ -283,7 +391,7 @@ public class McastTest extends McastTestBase {
 
   @Test
   public void testRouteAddedEvent() throws InterruptedException {
-
+      init(false, null, null);
       //Adding the details to create different routes
       previousSubject = McastRouteUpdate.mcastRouteUpdate(route1, emptySource, sinks);
       currentSubject = McastRouteUpdate.mcastRouteUpdate(route1, emptySource, sinks);
@@ -299,7 +407,7 @@ public class McastTest extends McastTestBase {
 
   @Test
   public void testRouteRemovedEvent() throws InterruptedException {
-
+      init(false, null, null);
       testRouteAddedEvent();
 
       //Adding the details to create different routes
@@ -316,7 +424,7 @@ public class McastTest extends McastTestBase {
 
   @Test
   public void testSourceAddedEvent() throws InterruptedException {
-
+      init(false, null, null);
       // Adding route before adding source.
       testRouteAddedEvent();
 
@@ -334,7 +442,7 @@ public class McastTest extends McastTestBase {
 
   @Test
   public void testSourcesRemovedEvent() throws InterruptedException {
-
+      init(false, null, null);
       testSourceAddedEvent();
 
       //Adding the details to create different routes
@@ -350,6 +458,7 @@ public class McastTest extends McastTestBase {
 
     @Test
     public void mcastTestEventGeneration() throws InterruptedException {
+      init(false, VlanId.vlanId("4000"), VlanId.NONE);
       //fetching route details used to push CordMcastStatisticsEvent.
       IpAddress testGroup = route1.group();
       String testSource = route1.source().isEmpty() ? "*" : route1.source().get().toString();

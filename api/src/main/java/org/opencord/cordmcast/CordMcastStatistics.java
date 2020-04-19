@@ -28,9 +28,11 @@ public class CordMcastStatistics {
     private String sourceAddress;
     //vlan id used in mcast event.
     private VlanId vlanId;
+    private VlanId innerVlanId;
 
-    public CordMcastStatistics(IpAddress groupAddress, String sourceAddresss, VlanId vlanId) {
+    public CordMcastStatistics(IpAddress groupAddress, String sourceAddresss, VlanId vlanId, VlanId innerVlanId) {
         this.vlanId = vlanId;
+        this.innerVlanId = innerVlanId;
         this.sourceAddress = sourceAddresss;
         this.groupAddress = groupAddress;
     }
@@ -57,5 +59,13 @@ public class CordMcastStatistics {
 
     public void setVlanId(VlanId vlanId) {
         this.vlanId = vlanId;
+    }
+
+    public VlanId getInnerVlanId() {
+        return innerVlanId;
+    }
+
+    public void setInnerVlanId(VlanId innerVlanId) {
+        this.innerVlanId = innerVlanId;
     }
 }

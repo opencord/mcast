@@ -241,7 +241,7 @@ public class CordMcast implements CordMcastService {
             log.error("Unable to parse configuration parameter for priority", ne);
             priority = DEFAULT_PRIORITY;
         }
-        cordMcastStatisticsService.setVlanValue(assignedVlan());
+        feedStatsServiceWithVlanConfigValues();
     }
 
     @Deactivate
@@ -254,6 +254,14 @@ public class CordMcast implements CordMcastService {
         clearGroups();
         groups.destroy();
         log.info("Stopped");
+    }
+
+    /**
+     * Updates the stats service with current VLAN config values.
+     */
+    private void feedStatsServiceWithVlanConfigValues() {
+        cordMcastStatisticsService.setVlanValue(assignedVlan());
+        cordMcastStatisticsService.setInnerVlanValue(assignedInnerVlan());
     }
 
     public void clearGroups() {
@@ -574,6 +582,7 @@ public class CordMcast implements CordMcastService {
         if (config.egressInnerVlan() != null) {
             mcastInnerVlan = config.egressInnerVlan();
         }
+        feedStatsServiceWithVlanConfigValues();
     }
 
     private class NextKey {

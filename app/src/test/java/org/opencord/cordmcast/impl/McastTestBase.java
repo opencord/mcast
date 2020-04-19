@@ -54,6 +54,7 @@ import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.IPCriterion;
+import org.onosproject.net.flow.criteria.VlanIdCriterion;
 import org.onosproject.net.flow.instructions.Instruction;
 import org.onosproject.net.flow.instructions.Instructions.OutputInstruction;
 import org.onosproject.net.flowobjective.FlowObjectiveServiceAdapter;
@@ -164,14 +165,22 @@ public class McastTestBase {
      * Mocks the McastConfig class to return vlan id value.
      */
     static class MockMcastConfig extends McastConfig {
+        private VlanId egressVlan;
+        private VlanId egressInnerVlan;
+
+        public MockMcastConfig(VlanId egressVlan, VlanId egressInnerVlan) {
+            this.egressVlan = egressVlan;
+            this.egressInnerVlan = egressInnerVlan;
+        }
+
         @Override
         public VlanId egressVlan() {
-            return VlanId.vlanId("4000");
+            return egressVlan;
         }
 
         @Override
         public VlanId egressInnerVlan() {
-            return VlanId.NONE;
+            return egressInnerVlan;
         }
     }
 
@@ -181,9 +190,21 @@ public class McastTestBase {
     @SuppressWarnings("unchecked")
     static final class TestNetworkConfigRegistry
             extends NetworkConfigRegistryAdapter {
+
+        private VlanId egressVlan = VlanId.vlanId("4000");
+        private VlanId egressInnerVlan = VlanId.NONE;
+
+        public void setEgressVlan(VlanId egressVlan) {
+            this.egressVlan = egressVlan;
+        }
+
+        public void setEgressInnerVlan(VlanId egressInnerVlan) {
+            this.egressInnerVlan = egressInnerVlan;
+        }
+
         @Override
         public <S, C extends Config<S>> C getConfig(S subject, Class<C> configClass) {
-            McastConfig mcastConfig = new MockMcastConfig();
+            McastConfig mcastConfig = new MockMcastConfig(egressVlan, egressInnerVlan);
             return (C) mcastConfig;
         }
     }
@@ -293,4 +314,16 @@ public class McastTestBase {
        return (IPCriterion) ipCriterion;
      }
 
+    public VlanIdCriterion vlanId(TrafficSelector trafficSelector, Criterion.Type type) {
+        Set<Criterion> criterionSet = trafficSelector.criteria();
+        Iterator<Criterion> it = criterionSet.iterator();
+        VlanIdCriterion criterion = null;
+        while (it.hasNext()) {
+            Criterion criteria = it.next();
+            if (type == criteria.type()) {
+                criterion = (VlanIdCriterion) criteria;
+            }
+        }
+        return criterion;
+    }
 }

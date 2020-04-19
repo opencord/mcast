@@ -78,6 +78,7 @@ public class CordMcastStatisticsManager
     private ScheduledExecutorService executor;
 
     private VlanId vlanId;
+    private VlanId innerVlanId;
 
     @Activate
     public void activate(ComponentContext context) {
@@ -119,7 +120,7 @@ public class CordMcastStatisticsManager
         routes.forEach(route -> {
             mcastData.add(new CordMcastStatistics(route.group(),
                     route.source().isEmpty() ? "*" : route.source().get().toString(),
-                    vlanId));
+                    vlanId, innerVlanId));
         });
         return mcastData;
     }
@@ -127,6 +128,11 @@ public class CordMcastStatisticsManager
     @Override
     public void setVlanValue(VlanId vlanValue) {
         vlanId = vlanValue;
+    }
+
+    @Override
+    public void setInnerVlanValue(VlanId innerVlanValue) {
+        innerVlanId = innerVlanValue;
     }
 
     /**
@@ -141,7 +147,9 @@ public class CordMcastStatisticsManager
                     " | Source: " +
                     (mcastStats.getSourceAddress() != null ? mcastStats.getSourceAddress().toString() : "null") +
                     " | Vlan: " +
-                    (mcastStats.getVlanId() != null ? mcastStats.getVlanId().toString() : "null"));
+                    (mcastStats.getVlanId() != null ? mcastStats.getVlanId().toString() : "null") +
+                    " | InnerVlan: " +
+                    (mcastStats.getInnerVlanId() != null ? mcastStats.getInnerVlanId().toString() : "null"));
         });
         post(new CordMcastStatisticsEvent(CordMcastStatisticsEvent.Type.STATUS_UPDATE, routeList));
     }
