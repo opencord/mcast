@@ -131,6 +131,9 @@ public class McastTestBase {
           public void forward(DeviceId deviceId, ForwardingObjective forwardingObjective) {
               synchronized (forwardMap) {
                 forwardMap.put(deviceId, forwardingObjective);
+                forwardingObjective.context().ifPresent(context -> {
+                    context.onSuccess(forwardingObjective);
+                });
                 forwardMap.notify();
               }
           }

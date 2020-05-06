@@ -346,19 +346,9 @@ public class McastTest extends McastTestBase {
        McastEvent event = new McastEvent(McastEvent.Type.SINKS_REMOVED, previousSubject, currentSubject);
        cordMcast.listener.event(event);
 
-       // Operation will be REMOVE_FROM_EXISTING and nextMap will be updated.  None --> { }
+       // Operation will be REMOVE and nextMap will be updated.  None --> { }
        assertAfter(WAIT_TIMEOUT, WAIT_TIMEOUT * 2, () ->
-       assertTrue(nextMap.get(DEVICE_ID_OF_A).op() == Objective.Operation.REMOVE_FROM_EXISTING));
-
-       // Output port number will be changed to 24 i.e. PORT_C
-       Collection<TrafficTreatment> traffictreatMentCollection = nextMap.get(DEVICE_ID_OF_A).next();
-       assertTrue(1 == traffictreatMentCollection.size());
-       OutputInstruction output = null;
-       for (TrafficTreatment trafficTreatment : traffictreatMentCollection) {
-          output = outputPort(trafficTreatment);
-       }
-       assertNotNull(output);
-       assertTrue(PORT_C == output.port());
+       assertTrue(nextMap.get(DEVICE_ID_OF_A).op() == Objective.Operation.REMOVE));
   }
 
   @Test
