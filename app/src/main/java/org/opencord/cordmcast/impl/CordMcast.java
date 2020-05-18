@@ -789,7 +789,8 @@ public class CordMcast implements CordMcastService {
         public void event(DeviceEvent event) {
             eventExecutor.execute(() -> {
                 DeviceId devId = event.subject().id();
-                if (!deviceService.isAvailable(devId)) {
+                if (!deviceService.isAvailable(devId) &&
+                        isLocalLeader(event.subject().id())) {
                     if (deviceService.getPorts(devId).isEmpty()) {
                         log.info("Handling controlled device disconnection .. "
                                          + "flushing all state for dev:{}", devId);
@@ -805,9 +806,6 @@ public class CordMcast implements CordMcastService {
                                          + "assuming temporary disconnection, "
                                          + "retaining state for device {}", devId);
                     }
-                } else {
-                    log.debug("Device is connected {}, " +
-                                      "currently not handling", devId);
                 }
             });
 
@@ -815,8 +813,7 @@ public class CordMcast implements CordMcastService {
 
         @Override
         public boolean isRelevant(DeviceEvent event) {
-            return isLocalLeader(event.subject().id())
-                    && event.type().equals(DeviceEvent.Type.DEVICE_AVAILABILITY_CHANGED);
+            return event.type().equals(DeviceEvent.Type.DEVICE_AVAILABILITY_CHANGED);
         }
     }
 
