@@ -28,6 +28,8 @@ import org.onlab.packet.Ip4Address;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.VlanId;
 import org.onosproject.TestApplicationId;
+import org.onosproject.cluster.LeadershipServiceAdapter;
+import org.onosproject.cluster.NodeId;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreServiceAdapter;
 import org.onosproject.event.DefaultEventSinkRegistry;
@@ -149,6 +151,13 @@ public class McastTestBase {
           public boolean isLocalMaster(DeviceId deviceId) {
                return true;
           }
+     }
+
+     class LeadershipServiceMcastAdapter extends LeadershipServiceAdapter {
+        @Override
+        public NodeId getLeader(String path) {
+            return NodeId.nodeId("local");
+        }
      }
 
     protected class MockSadisService implements SadisService {

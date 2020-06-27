@@ -27,6 +27,7 @@ import org.onlab.packet.IpAddress;
 import org.onlab.packet.VlanId;
 import org.onosproject.cfg.ComponentConfigAdapter;
 import org.onosproject.cfg.ComponentConfigService;
+import org.onosproject.cluster.ClusterServiceAdapter;
 import org.onosproject.mcast.api.McastEvent;
 import org.onosproject.mcast.api.McastRoute;
 import org.onosproject.mcast.api.McastRouteUpdate;
@@ -86,6 +87,8 @@ public class McastTest extends McastTestBase {
     private void init(boolean vlanEnabled, VlanId egressVlan, VlanId egressInnerVlan) {
         cordMcast = new CordMcast();
         cordMcastStatisticsManager = new CordMcastStatisticsManager();
+        cordMcastStatisticsManager.clusterService = new ClusterServiceAdapter();
+        cordMcastStatisticsManager.leadershipService = new LeadershipServiceMcastAdapter();
         cordMcast.coreService = new MockCoreService();
 
         TestNetworkConfigRegistry testNetworkConfigRegistry = new TestNetworkConfigRegistry();
@@ -154,23 +157,23 @@ public class McastTest extends McastTestBase {
 
       // ForwardMap will contain the operation "Add" in the flowObjective. None -> CP_B
       assertNotNull(forwardMap.get(DEVICE_ID_OF_A));
-      assertTrue(forwardMap.get(DEVICE_ID_OF_A).op() == Objective.Operation.ADD);
+      assertEquals(forwardMap.get(DEVICE_ID_OF_A).op(), Objective.Operation.ADD);
 
       // Output port number will be PORT_B i.e. 16
       Collection<TrafficTreatment> traffictreatMentCollection =
            nextMap.get(DEVICE_ID_OF_A).next();
-      assertTrue(1 == traffictreatMentCollection.size());
+      assertEquals(1, traffictreatMentCollection.size());
       OutputInstruction output = null;
       for (TrafficTreatment trafficTreatment : traffictreatMentCollection) {
          output = outputPort(trafficTreatment);
       }
       assertNotNull(output);
-      assertTrue(PORT_B == output.port());
+      assertEquals(PORT_B, output.port());
       // Checking the group ip address
       TrafficSelector trafficSelector = forwardMap.get(DEVICE_ID_OF_A).selector();
       IPCriterion ipCriterion = ipAddress(trafficSelector);
       assertNotNull(ipCriterion);
-      assertTrue(MULTICAST_IP.equals(ipCriterion.ip().address()));
+      assertEquals(MULTICAST_IP, ipCriterion.ip().address());
       //checking the vlan criterion
       TrafficSelector meta = forwardMap.get(DEVICE_ID_OF_A).meta();
       VlanIdCriterion vlanId = vlanId(meta, Criterion.Type.VLAN_VID);
@@ -198,23 +201,23 @@ public class McastTest extends McastTestBase {
         }
         // ForwardMap will contain the operation "Add" in the flowObjective. None -> CP_B
         assertNotNull(forwardMap.get(DEVICE_ID_OF_A));
-        assertTrue(forwardMap.get(DEVICE_ID_OF_A).op() == Objective.Operation.ADD);
+        assertEquals(forwardMap.get(DEVICE_ID_OF_A).op(), Objective.Operation.ADD);
 
         // Output port number will be PORT_B i.e. 16
         Collection<TrafficTreatment> traffictreatMentCollection =
                 nextMap.get(DEVICE_ID_OF_A).next();
-        assertTrue(1 == traffictreatMentCollection.size());
+        assertEquals(1, traffictreatMentCollection.size());
         OutputInstruction output = null;
         for (TrafficTreatment trafficTreatment : traffictreatMentCollection) {
             output = outputPort(trafficTreatment);
         }
         assertNotNull(output);
-        assertTrue(PORT_B == output.port());
+        assertEquals(PORT_B, output.port());
         // Checking the group ip address
         TrafficSelector trafficSelector = forwardMap.get(DEVICE_ID_OF_A).selector();
         IPCriterion ipCriterion = ipAddress(trafficSelector);
         assertNotNull(ipCriterion);
-        assertTrue(MULTICAST_IP.equals(ipCriterion.ip().address()));
+        assertEquals(MULTICAST_IP, ipCriterion.ip().address());
         //checking the vlan criteria
         TrafficSelector meta = forwardMap.get(DEVICE_ID_OF_A).meta();
         VlanIdCriterion vlanIdCriterion = vlanId(meta, Criterion.Type.VLAN_VID);
@@ -244,23 +247,23 @@ public class McastTest extends McastTestBase {
 
         // ForwardMap will contain the operation "Add" in the flowObjective. None -> CP_B
         assertNotNull(forwardMap.get(DEVICE_ID_OF_A));
-        assertTrue(forwardMap.get(DEVICE_ID_OF_A).op() == Objective.Operation.ADD);
+        assertEquals(forwardMap.get(DEVICE_ID_OF_A).op(), Objective.Operation.ADD);
 
         // Output port number will be PORT_B i.e. 16
         Collection<TrafficTreatment> traffictreatMentCollection =
                 nextMap.get(DEVICE_ID_OF_A).next();
-        assertTrue(1 == traffictreatMentCollection.size());
+        assertEquals(1, traffictreatMentCollection.size());
         OutputInstruction output = null;
         for (TrafficTreatment trafficTreatment : traffictreatMentCollection) {
             output = outputPort(trafficTreatment);
         }
         assertNotNull(output);
-        assertTrue(PORT_B == output.port());
+        assertEquals(PORT_B, output.port());
         // Checking the group ip address
         TrafficSelector trafficSelector = forwardMap.get(DEVICE_ID_OF_A).selector();
         IPCriterion ipCriterion = ipAddress(trafficSelector);
         assertNotNull(ipCriterion);
-        assertTrue(MULTICAST_IP.equals(ipCriterion.ip().address()));
+        assertEquals(MULTICAST_IP, ipCriterion.ip().address());
         //checking the vlan criteria
         TrafficSelector meta = forwardMap.get(DEVICE_ID_OF_A).meta();
         VlanIdCriterion vlanIdCriterion = vlanId(meta, Criterion.Type.VLAN_VID);
@@ -289,16 +292,16 @@ public class McastTest extends McastTestBase {
 
        // NextMap will contain the operation "ADD_TO_EXISTING" in the DefaultNextObjective.
        assertAfter(WAIT_TIMEOUT, WAIT_TIMEOUT * 2, () ->
-       assertTrue(nextMap.get(DEVICE_ID_OF_A).op() == Objective.Operation.ADD_TO_EXISTING));
+       assertEquals(nextMap.get(DEVICE_ID_OF_A).op(), Objective.Operation.ADD_TO_EXISTING));
        // Output port number will be changed to 24 i.e. PORT_C
        Collection<TrafficTreatment> traffictreatMentCollection = nextMap.get(DEVICE_ID_OF_A).next();
-       assertTrue(1 == traffictreatMentCollection.size());
+       assertEquals(1, traffictreatMentCollection.size());
        OutputInstruction output = null;
        for (TrafficTreatment trafficTreatment : traffictreatMentCollection) {
           output = outputPort(trafficTreatment);
        }
        assertNotNull(output);
-       assertTrue(PORT_C == output.port());
+       assertEquals(PORT_C, output.port());
     }
 
     @Test
@@ -316,19 +319,19 @@ public class McastTest extends McastTestBase {
        cordMcast.listener.event(event);
        // Operation will be REMOVE_FROM_EXISTING and nextMap will be updated. ( None --> CP_C)
        assertAfter(WAIT_TIMEOUT, WAIT_TIMEOUT * 2, () ->
-       assertTrue(nextMap.get(DEVICE_ID_OF_A).op() == Objective.Operation.REMOVE_FROM_EXISTING));
+       assertEquals(nextMap.get(DEVICE_ID_OF_A).op(), Objective.Operation.REMOVE_FROM_EXISTING));
 
        // Output port number will be PORT_B i.e. 16
        // Port_B is removed from the group.
        Collection<TrafficTreatment> traffictreatMentCollection =
             nextMap.get(DEVICE_ID_OF_A).next();
-       assertTrue(1 == traffictreatMentCollection.size());
+       assertEquals(1, traffictreatMentCollection.size());
        OutputInstruction output = null;
        for (TrafficTreatment trafficTreatment : traffictreatMentCollection) {
           output = outputPort(trafficTreatment);
        }
        assertNotNull(output);
-       assertTrue(PORT_B == output.port());
+       assertEquals(PORT_B, output.port());
 
     }
 
@@ -348,7 +351,7 @@ public class McastTest extends McastTestBase {
 
        // Operation will be REMOVE and nextMap will be updated.  None --> { }
        assertAfter(WAIT_TIMEOUT, WAIT_TIMEOUT * 2, () ->
-       assertTrue(nextMap.get(DEVICE_ID_OF_A).op() == Objective.Operation.REMOVE));
+       assertEquals(nextMap.get(DEVICE_ID_OF_A).op(), Objective.Operation.REMOVE));
   }
 
   @Test
@@ -374,8 +377,8 @@ public class McastTest extends McastTestBase {
        cordMcast.listener.event(event);
        // OltInfo flag is set to true when olt device is unkown
        assertAfter(WAIT, WAIT * 2, () -> assertTrue(knownOltFlag));
-       assertTrue(0 == forwardMap.size());
-       assertTrue(0 == nextMap.size());
+       assertEquals(0, forwardMap.size());
+       assertEquals(0, nextMap.size());
 
   }
 
@@ -389,8 +392,8 @@ public class McastTest extends McastTestBase {
       McastEvent event = new McastEvent(McastEvent.Type.ROUTE_ADDED, previousSubject, currentSubject);
       cordMcast.listener.event(event);
       // There will be no forwarding objective
-      assertAfter(WAIT, WAIT * 2, () -> assertTrue(0 == forwardMap.size()));
-      assertTrue(0 == nextMap.size());
+      assertAfter(WAIT, WAIT * 2, () -> assertEquals(0, forwardMap.size()));
+      assertEquals(0, nextMap.size());
 
    }
 
@@ -407,8 +410,8 @@ public class McastTest extends McastTestBase {
       McastEvent event = new McastEvent(McastEvent.Type.ROUTE_REMOVED, previousSubject, currentSubject);
       cordMcast.listener.event(event);
       // There will be no forwarding objective
-      assertAfter(WAIT, WAIT * 2, () -> assertTrue(0 == forwardMap.size()));
-      assertTrue(0 == nextMap.size());
+      assertAfter(WAIT, WAIT * 2, () -> assertEquals(0, forwardMap.size()));
+      assertEquals(0, nextMap.size());
 
    }
 
@@ -425,8 +428,8 @@ public class McastTest extends McastTestBase {
       McastEvent event = new McastEvent(McastEvent.Type.SOURCES_ADDED, previousSubject, currentSubject);
       cordMcast.listener.event(event);
       // There will be no forwarding objective
-      assertAfter(WAIT, WAIT * 2, () -> assertTrue(0 == forwardMap.size()));
-      assertTrue(0 == nextMap.size());
+      assertAfter(WAIT, WAIT * 2, () -> assertEquals(0, forwardMap.size()));
+      assertEquals(0, nextMap.size());
 
    }
 
@@ -442,8 +445,8 @@ public class McastTest extends McastTestBase {
       // Warning message of unknown event will be displayed.
       McastEvent event = new McastEvent(McastEvent.Type.SOURCES_REMOVED, previousSubject, currentSubject);
       cordMcast.listener.event(event);
-      assertAfter(WAIT, WAIT * 2, () -> assertTrue(0 == forwardMap.size()));
-      assertTrue(0 == nextMap.size());
+      assertAfter(WAIT, WAIT * 2, () -> assertEquals(0, forwardMap.size()));
+      assertEquals(0, nextMap.size());
    }
 
     @Test
