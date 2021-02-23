@@ -16,6 +16,7 @@
 package org.opencord.cordmcast.impl;
 
 
+import com.google.common.collect.Lists;
 import org.onlab.packet.VlanId;
 import org.onlab.util.SafeRecurringTask;
 import org.onosproject.cfg.ComponentConfigService;
@@ -35,6 +36,7 @@ import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 
 import java.util.Dictionary;
@@ -63,11 +65,14 @@ import static org.slf4j.LoggerFactory.getLogger;
 public class CordMcastStatisticsManager
         extends AbstractListenerManager<CordMcastStatisticsEvent, CordMcastStatisticsEventListener>
         implements CordMcastStatisticsService {
-
+    private static final String MCAST_NOT_RUNNING = "Multicast is not running.";
     private static final String CORD_MCAST_STATISTICS_LEADERSHIP = "cord-mcast-statistics-leadership";
 
-    @Reference(cardinality = ReferenceCardinality.MANDATORY)
-    protected MulticastRouteService mcastService;
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL,
+            bind = "bindMcastRouteService",
+            unbind = "unbindMcastRouteService",
+            policy = ReferencePolicy.DYNAMIC)
+    protected volatile MulticastRouteService mcastService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected ComponentConfigService componentConfigService;
@@ -127,7 +132,21 @@ public class CordMcastStatisticsManager
         log.info("CordMcastStatisticsManager deactivated.");
     }
 
+    protected void bindMcastRouteService(MulticastRouteService service) {
+        mcastService = service;
+        log.info("Multicast route service binds to onos.");
+    }
+
+    protected void unbindMcastRouteService(MulticastRouteService service) {
+        mcastService = null;
+        log.info("Multicast route service unbinds from onos.");
+    }
+
     public List<CordMcastStatistics> getMcastDetails() {
+        if (mcastService == null) {
+            log.warn(MCAST_NOT_RUNNING);
+            return Lists.newArrayList();
+        }
         List<CordMcastStatistics> mcastData = new ArrayList<CordMcastStatistics>();
         Set<McastRoute> routes = mcastService.getRoutes();
         routes.forEach(route -> {

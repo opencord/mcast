@@ -76,6 +76,7 @@ import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 
 import java.util.Dictionary;
@@ -104,10 +105,12 @@ import static org.slf4j.LoggerFactory.getLogger;
  */
 @Component(immediate = true,
         property = {
-        VLAN_ENABLED + ":Boolean=" + DEFAULT_VLAN_ENABLED,
-        PRIORITY + ":Integer=" + DEFAULT_PRIORITY,
-})
+                VLAN_ENABLED + ":Boolean=" + DEFAULT_VLAN_ENABLED,
+                PRIORITY + ":Integer=" + DEFAULT_PRIORITY,
+        })
 public class CordMcast implements CordMcastService {
+    private static final String MCAST_NOT_RUNNING = "Multicast is not running.";
+    private static final String SADIS_NOT_RUNNING = "Sadis is not running.";
     private static final String APP_NAME = "org.opencord.mcast";
 
     private final Logger log = getLogger(getClass());
@@ -115,8 +118,11 @@ public class CordMcast implements CordMcastService {
     private static final int DEFAULT_PRIORITY = 500;
     private static final short DEFAULT_MCAST_VLAN = 4000;
 
-    @Reference(cardinality = ReferenceCardinality.MANDATORY)
-    protected MulticastRouteService mcastService;
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL,
+            bind = "bindMcastRouteService",
+            unbind = "unbindMcastRouteService",
+            policy = ReferencePolicy.DYNAMIC)
+    protected volatile MulticastRouteService mcastService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected FlowObjectiveService flowObjectiveService;
@@ -145,8 +151,11 @@ public class CordMcast implements CordMcastService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     private LeadershipService leadershipService;
 
-    @Reference(cardinality = ReferenceCardinality.MANDATORY)
-    protected SadisService sadisService;
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL,
+            bind = "bindSadisService",
+            unbind = "unbindSadisService",
+            policy = ReferencePolicy.DYNAMIC)
+    protected volatile SadisService sadisService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected CordMcastStatisticsService cordMcastStatisticsService;
@@ -190,12 +199,15 @@ public class CordMcast implements CordMcastService {
 
     // lock to synchronize local operations
     private final Lock mcastLock = new ReentrantLock();
+
     private void mcastLock() {
         mcastLock.lock();
     }
+
     private void mcastUnlock() {
         mcastLock.unlock();
     }
+
     private ExecutorService eventExecutor;
 
     //Device listener to purge groups upon device disconnection.
@@ -224,14 +236,16 @@ public class CordMcast implements CordMcastService {
 
         networkConfig.registerConfigFactory(cordMcastConfigFactory);
         networkConfig.addListener(configListener);
-        mcastService.addListener(listener);
-
-        mcastService.getRoutes().stream()
-                .map(r -> new ImmutablePair<>(r, mcastService.sinks(r)))
-                .filter(pair -> pair.getRight() != null && !pair.getRight().isEmpty())
-                .forEach(pair -> pair.getRight().forEach(sink -> addSink(pair.getLeft(),
-                                                                          sink)));
-
+        if (mcastService != null) {
+            mcastService.addListener(listener);
+            mcastService.getRoutes().stream()
+                    .map(r -> new ImmutablePair<>(r, mcastService.sinks(r)))
+                    .filter(pair -> pair.getRight() != null && !pair.getRight().isEmpty())
+                    .forEach(pair -> pair.getRight().forEach(sink -> addSink(pair.getLeft(),
+                            sink)));
+        } else {
+            log.warn(MCAST_NOT_RUNNING);
+        }
         McastConfig config = networkConfig.getConfig(coreAppId, CORD_MCAST_CONFIG_CLASS);
         updateConfig(config);
         deviceService.addListener(deviceListener);
@@ -259,14 +273,36 @@ public class CordMcast implements CordMcastService {
     public void deactivate() {
         deviceService.removeListener(deviceListener);
         componentConfigService.unregisterProperties(getClass(), false);
-        mcastService.removeListener(listener);
+        if (mcastService != null) {
+            mcastService.removeListener(listener);
+        }
         networkConfig.removeListener(configListener);
         networkConfig.unregisterConfigFactory(cordMcastConfigFactory);
         eventExecutor.shutdown();
         eventExecutor = null;
-        groups.clear();
-        groups.destroy();
         log.info("Stopped");
+    }
+
+    protected void bindSadisService(SadisService service) {
+        sadisService = service;
+        log.info("Sadis-service binds to onos.");
+    }
+
+    protected void unbindSadisService(SadisService service) {
+        sadisService = null;
+        log.info("Sadis-service unbinds from onos.");
+    }
+
+    protected void bindMcastRouteService(MulticastRouteService service) {
+        mcastService = service;
+        mcastService.addListener(listener);
+        log.info("Multicast route service binds to onos.");
+    }
+
+    protected void unbindMcastRouteService(MulticastRouteService service) {
+        service.removeListener(listener);
+        mcastService = null;
+        log.info("Multicast route service unbinds from onos.");
     }
 
     /**
@@ -289,22 +325,22 @@ public class CordMcast implements CordMcastService {
                     //On Success of removing the fwd objective we remove also the group.
                     Consumer<Objective> onSuccess = (objective) -> {
                         log.debug("Successfully removed fwd objective for {} on {}, " +
-                                          "removing next objective {}", groupInfo.group,
-                                  groupInfo.getDevice(), next.getNextId());
+                                        "removing next objective {}", groupInfo.group,
+                                groupInfo.getDevice(), next.getNextId());
                         eventExecutor.submit(() -> flowObjectiveService.next(groupInfo.getDevice(),
-                                                                             nextObject(next.getNextId(),
-                                                             null,
-                                                             NextType.Remove, groupInfo.group)));
+                                nextObject(next.getNextId(),
+                                        null,
+                                        NextType.Remove, groupInfo.group)));
                     };
 
                     ObjectiveContext context =
                             new DefaultObjectiveContext(onSuccess, (objective, error) ->
                                     log.warn("Failed to remove {} on {}: {}",
-                                             groupInfo.group, next.getNextId(), error));
+                                            groupInfo.group, next.getNextId(), error));
                     // remove the flow rule
                     flowObjectiveService.forward(groupInfo.getDevice(),
-                                                 fwdObject(next.getNextId(),
-                                                           groupInfo.group).remove(context));
+                            fwdObject(next.getNextId(),
+                                    groupInfo.group).remove(context));
 
                 }
             });
@@ -349,8 +385,9 @@ public class CordMcast implements CordMcastService {
 
     /**
      * Processes previous, and new sinks then finds the sinks to be removed.
+     *
      * @param prevSinks the previous sinks to be evaluated
-     * @param newSinks the new sinks to be evaluated
+     * @param newSinks  the new sinks to be evaluated
      * @returnt the set of the sinks to be removed
      */
     private Set<ConnectPoint> getSinksToBeRemoved(Map<HostId, Set<ConnectPoint>> prevSinks,
@@ -361,7 +398,8 @@ public class CordMcast implements CordMcastService {
 
     /**
      * Processes previous, and new sinks then finds the sinks to be added.
-     * @param newSinks the new sinks to be processed
+     *
+     * @param newSinks     the new sinks to be processed
      * @param allPrevSinks all previous sinks
      * @return the set of the sinks to be added
      */
@@ -372,6 +410,7 @@ public class CordMcast implements CordMcastService {
 
     /**
      * Gets single-homed sinks that are in set1 but not in set2.
+     *
      * @param sinkSet1 the first sink map
      * @param sinkSet2 the second sink map
      * @return a set containing all the single-homed sinks found in set1 but not in set2
@@ -390,14 +429,14 @@ public class CordMcast implements CordMcastService {
                 Sets.newHashSet() :
                 sinkSet2.get(HostId.NONE);
         return Sets.difference(sinksToBeProcessed, singleHomedSinksOfSet2);
-    };
+    }
 
 
     private void removeSinks(McastEvent event) {
         mcastLock();
         try {
             Set<ConnectPoint> sinksToBeRemoved = getSinksToBeRemoved(event.prevSubject().sinks(),
-                                                                     event.subject().sinks());
+                    event.subject().sinks());
             sinksToBeRemoved.forEach(sink -> removeSink(event.subject().route().group(), sink));
         } finally {
             mcastUnlock();
@@ -407,7 +446,7 @@ public class CordMcast implements CordMcastService {
     private void removeSink(IpAddress group, ConnectPoint sink) {
         if (!isLocalLeader(sink.deviceId())) {
             log.debug("Not the leader of {}. Skip sink_removed event for the sink {} and group {}",
-                      sink.deviceId(), sink, group);
+                    sink.deviceId(), sink, group);
             return;
         }
 
@@ -542,6 +581,10 @@ public class CordMcast implements CordMcastService {
     private Optional<SubscriberAndDeviceInformation> getSubscriberAndDeviceInformation(String serialNumber) {
         long start = System.currentTimeMillis();
         try {
+            if (sadisService == null) {
+                log.warn(SADIS_NOT_RUNNING);
+                return Optional.empty();
+            }
             return Optional.ofNullable(sadisService.getSubscriberInfoService().get(serialNumber));
         } finally {
             if (log.isDebugEnabled()) {
@@ -682,7 +725,7 @@ public class CordMcast implements CordMcastService {
         }
     }
 
-    private enum NextType { AddNew, AddToExisting, Remove, RemoveFromExisting };
+    private enum NextType { AddNew, AddToExisting, Remove, RemoveFromExisting }
 
     private NextObjective nextObject(Integer nextId, PortNumber port,
                                      NextType nextType, IpAddress mcastIp) {

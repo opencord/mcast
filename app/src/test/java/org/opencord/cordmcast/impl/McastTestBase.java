@@ -262,6 +262,10 @@ public class McastTestBase {
         }
 
         @Override
+        public void clearLocalData() {
+        }
+
+        @Override
         public void invalidateAll() {
         }
 

@@ -28,6 +28,7 @@
 
     <artifactId>mcast-api</artifactId>
     <packaging>bundle</packaging>
+    <version>${mcast.api.version}</version>
 
     <dependencies>
         <dependency>

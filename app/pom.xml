@@ -35,10 +35,6 @@
         <onos.app.category>Traffic Steering</onos.app.category>
         <onos.app.title>CORD Multicast App</onos.app.title>
         <onos.app.url>http://opencord.org</onos.app.url>
-        <onos.app.requires>
-            org.onosproject.mcast,
-            org.opencord.sadis
-        </onos.app.requires>
     </properties>
 
     <dependencies>
@@ -76,7 +72,7 @@
         <dependency>
             <groupId>org.opencord</groupId>
             <artifactId>mcast-api</artifactId>
-            <version>${project.version}</version>
+            <version>${mcast.api.version}</version>
             <scope>compile</scope>
         </dependency>
         <dependency>

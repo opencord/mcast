@@ -17,8 +17,10 @@
 <app name="org.opencord.mcast" origin="ONF" version="${project.version}"
      category="Traffic Steering" url="http://opencord.org" title="CORD Mcast app"
      featuresRepo="mvn:${project.groupId}/${project.artifactId}/${project.version}/xml/features"
-     features="${project.artifactId}" apps="org.onosproject.mcast,org.opencord.sadis">
+     features="${project.artifactId}">
     <description>${project.description}</description>
-    <artifact>mvn:${project.groupId}/mcast-api/${project.version}</artifact>
+    <artifact>mvn:${project.groupId}/mcast-api/${mcast.api.version}</artifact>
     <artifact>mvn:${project.groupId}/${project.artifactId}/${project.version}</artifact>
+    <artifact>mvn:${project.groupId}/sadis-api/${sadis.api.version}</artifact>
+    <artifact>mvn:org.onosproject/onos-apps-mcast-api/${onos.version}</artifact>
 </app>
