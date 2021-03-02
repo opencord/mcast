@@ -460,9 +460,10 @@ public class CordMcast implements CordMcastService {
         log.debug("Removing sink {} from the group {}", sink, group);
 
         NextKey key = new NextKey(sink.deviceId(), group);
-        groups.computeIfPresent(key, (k, v) -> {
+        if (groups.containsKey(key)) {
+            Versioned<NextContent> nextObj = groups.get(key);
 
-            Set<PortNumber> outPorts = Sets.newHashSet(v.getOutPorts());
+            Set<PortNumber> outPorts = Sets.newHashSet(nextObj.value().getOutPorts());
             outPorts.remove(sink.port());
 
             if (outPorts.isEmpty()) {
@@ -471,10 +472,10 @@ public class CordMcast implements CordMcastService {
                 //On Success of removing the fwd objective we remove also the group.
                 Consumer<Objective> onSuccess = (objective) -> {
                     log.debug("Successfully removed fwd objective for {} on {}, " +
-                                      "removing next objective {}", group, sink, v.getNextId());
+                                      "removing next objective {}", group, sink, nextObj.value().getNextId());
                     eventExecutor.execute(() -> {
                         //No port is needed since it's a remove Operation
-                        flowObjectiveService.next(sink.deviceId(), nextObject(v.getNextId(),
+                        flowObjectiveService.next(sink.deviceId(), nextObject(nextObj.value().getNextId(),
                                                                               null,
                                                                               NextType.Remove, group));
                     });
@@ -484,18 +485,18 @@ public class CordMcast implements CordMcastService {
                 ObjectiveContext context = new DefaultObjectiveContext(onSuccess,
                         (objective, error) -> log.warn("Failed to remove {} on {}: {}",
                                                        group, sink, error));
-                ForwardingObjective fwdObj = fwdObject(v.getNextId(), group).remove(context);
+                ForwardingObjective fwdObj = fwdObject(nextObj.value().getNextId(), group).remove(context);
                 flowObjectiveService.forward(sink.deviceId(), fwdObj);
+                // remove the whole entity if no out port exists in the port list
+                groups.remove(key);
             } else {
                 log.debug("Group {} has remaining {} ports, removing just {} " +
                                  "from it's sinks", group, outPorts, sink.port());
-                flowObjectiveService.next(sink.deviceId(), nextObject(v.getNextId(), sink.port(),
+                flowObjectiveService.next(sink.deviceId(), nextObject(nextObj.value().getNextId(), sink.port(),
                                                                       NextType.RemoveFromExisting, group));
+                groups.put(key, new NextContent(nextObj.value().getNextId(), ImmutableSet.copyOf(outPorts)));
             }
-            // remove the whole entity if no out port exists in the port list
-            return outPorts.isEmpty() ? null : new NextContent(v.getNextId(),
-                                                               ImmutableSet.copyOf(outPorts));
-        });
+        }
     }
 
     private void addSinks(McastEvent event) {
