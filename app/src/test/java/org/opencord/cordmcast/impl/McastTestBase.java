@@ -306,6 +306,11 @@ public class McastTestBase {
             }
             return null;
         }
+
+        @Override
+        public boolean isAvailable(DeviceId deviceId) {
+            return true;
+        }
     }
 
      public OutputInstruction outputPort(TrafficTreatment trafficTreatment) {
