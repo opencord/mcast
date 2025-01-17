@@ -33,7 +33,7 @@
     <description>CORD Multicast application</description>
 
     <properties>
-        <sadis.api.version>5.12.2</sadis.api.version>
+        <sadis.api.version>5.12.3</sadis.api.version>
         <mcast.api.version>2.9.3-SNAPSHOT</mcast.api.version>
     </properties>
 
