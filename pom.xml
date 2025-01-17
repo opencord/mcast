@@ -27,14 +27,14 @@
 
     <groupId>org.opencord</groupId>
     <artifactId>mcast</artifactId>
-    <version>2.9.3</version>
+    <version>2.9.4-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <description>CORD Multicast application</description>
 
     <properties>
         <sadis.api.version>5.12.3</sadis.api.version>
-        <mcast.api.version>2.9.3</mcast.api.version>
+        <mcast.api.version>2.9.4-SNAPSHOT</mcast.api.version>
     </properties>
 
     <modules>
